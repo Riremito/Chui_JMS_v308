@@ -1,11 +1,17 @@
 package handling.login.handler;
 
 import client.LoginCrypto;
+import client.LoginCryptoLegacy;
+import client.MapleClient;
 import database.DatabaseConnection;
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AutoRegister {
 
@@ -38,6 +44,17 @@ public class AutoRegister {
             return false;
         }
 
+        String password2_hash = null;
+        try {
+            password2_hash = LoginCryptoLegacy.encodeSHA1("777777");
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(MapleClient.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(MapleClient.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+
         try {
             ResultSet rs;
             try (PreparedStatement ipc = con.prepareStatement("SELECT SessionIP FROM accounts WHERE SessionIP = ?")) {
@@ -45,13 +62,14 @@ public class AutoRegister {
                 rs = ipc.executeQuery();
                 if (rs.first() == false || rs.last() == true && rs.getRow() < ACCOUNTS_PER_IP) {
                     try {
-                        try (PreparedStatement ps = con.prepareStatement("INSERT INTO accounts (name, password, email, birthday, macs, SessionIP) VALUES (?, ?, ?, ?, ?, ?)")) {
+                        try (PreparedStatement ps = con.prepareStatement("INSERT INTO accounts (name, password, email, birthday, macs, SessionIP, 2ndpassword) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
                             ps.setString(1, login);
                             ps.setString(2, LoginCrypto.hexSha1(pwd));
                             ps.setString(3, "autoregister@mail.com");
                             ps.setString(4, "2008-04-07 00:00:00");
                             ps.setString(5, "00-00-00-00-00-00");
                             ps.setString(6, sockAddr.substring(1, sockAddr.lastIndexOf(':')));
+                            ps.setString(7, password2_hash);
                             ps.executeUpdate();
                         }
 
